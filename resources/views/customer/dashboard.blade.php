@@ -363,33 +363,6 @@
 
 
 
-                <a
-                    href="{{ route('customer.queue') }}"
-                    class="
-                        mt-6
-                        flex
-                        items-center
-                        justify-center
-                        gap-5
-                        w-full
-                        py-4
-                        rounded-lg
-                        border
-                        border-cyan-300
-                        bg-cyan-400/5
-                        text-cyan-300
-                        font-semibold
-                        uppercase
-                        tracking-wide
-                        transition-all
-                        duration-300
-                        hover:bg-cyan-400/10
-                        hover:shadow-[0_0_20px_rgba(34,211,238,.25)]
-                    "
-                >
-                    <span class="text-3xl font-light leading-none">›</span>
-                    View Queue Details
-                </a>
 
             </div>
 
