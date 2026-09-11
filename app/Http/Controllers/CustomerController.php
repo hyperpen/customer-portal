@@ -46,17 +46,57 @@ class CustomerController extends Controller
 
     /*
     |--------------------------------------------------------------------------
+    | ADD NOTIFICATION
+    |--------------------------------------------------------------------------
+    */
+    private function addNotification(
+        Request $request,
+        string $title,
+        string $message,
+        string $type = 'info'
+    ): void {
+        $notifications = $request->session()->get(
+            'notifications',
+            []
+        );
+
+        array_unshift(
+            $notifications,
+            [
+                'id' => uniqid('NTF-'),
+                'title' => $title,
+                'message' => $message,
+                'type' => $type,
+                'read' => false,
+                'created_at' => now()->timestamp,
+            ]
+        );
+
+        $notifications = array_slice(
+            $notifications,
+            0,
+            50
+        );
+
+        $request->session()->put(
+            'notifications',
+            $notifications
+        );
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
     | DASHBOARD
     |--------------------------------------------------------------------------
     */
     public function dashboard(Request $request)
     {
-        $bookings = $request->session()->get('bookings', []);
+        $bookings = $request->session()->get(
+            'bookings',
+            []
+        );
 
-        /*
-         * Cancelled at Completed bookings
-         * hindi na considered active.
-         */
         $activeBooking = collect($bookings)
             ->whereNotIn('status', [
                 'Completed',
@@ -65,10 +105,6 @@ class CustomerController extends Controller
             ->sortByDesc('created_at')
             ->first();
 
-        /*
-         * Temporary demo booking habang
-         * session-based pa ang project.
-         */
         if (!$activeBooking) {
             $activeBooking = $this->defaultBooking();
         }
@@ -138,23 +174,13 @@ class CustomerController extends Controller
             ]
         );
 
-        /*
-        |--------------------------------------------------------------------------
-        | CUSTOMER PROFILE
-        |--------------------------------------------------------------------------
-        | Customer name and contact number always come from the saved profile.
-        */
+
         $profile = $request->session()->get(
             'profile',
             $this->defaultProfile()
         );
 
 
-        /*
-        |--------------------------------------------------------------------------
-        | VALIDATE OTHER SERVICE
-        |--------------------------------------------------------------------------
-        */
         if (
             $validated['service'] === 'Other'
             && empty($validated['other_service'])
@@ -168,33 +194,18 @@ class CustomerController extends Controller
         }
 
 
-        /*
-        |--------------------------------------------------------------------------
-        | FINAL SERVICE
-        |--------------------------------------------------------------------------
-        */
         $finalService =
             $validated['service'] === 'Other'
                 ? $validated['other_service']
                 : $validated['service'];
 
 
-        /*
-        |--------------------------------------------------------------------------
-        | GET BOOKINGS
-        |--------------------------------------------------------------------------
-        */
         $bookings = $request->session()->get(
             'bookings',
             []
         );
 
 
-        /*
-        |--------------------------------------------------------------------------
-        | GENERATE BOOKING ID
-        |--------------------------------------------------------------------------
-        */
         $bookingId = 'RS-' . str_pad(
             count($bookings) + 126,
             5,
@@ -203,20 +214,10 @@ class CustomerController extends Controller
         );
 
 
-        /*
-        |--------------------------------------------------------------------------
-        | GENERATE QUEUE NUMBER
-        |--------------------------------------------------------------------------
-        */
         $queueNumber =
             count($bookings) + 8;
 
 
-        /*
-        |--------------------------------------------------------------------------
-        | CREATE BOOKING
-        |--------------------------------------------------------------------------
-        */
         $booking = [
             'id' =>
                 $bookingId,
@@ -259,11 +260,6 @@ class CustomerController extends Controller
         ];
 
 
-        /*
-        |--------------------------------------------------------------------------
-        | SAVE BOOKING
-        |--------------------------------------------------------------------------
-        */
         $bookings[] = $booking;
 
         $request->session()->put(
@@ -277,11 +273,18 @@ class CustomerController extends Controller
         );
 
 
-        /*
-        |--------------------------------------------------------------------------
-        | REDIRECT
-        |--------------------------------------------------------------------------
-        */
+        $this->addNotification(
+            $request,
+            'Booking Confirmed',
+            'Booking ' .
+            $booking['id'] .
+            ' for ' .
+            $booking['motorcycle'] .
+            ' has been created.',
+            'success'
+        );
+
+
         return redirect()
             ->route('customer.status')
             ->with(
@@ -303,10 +306,6 @@ class CustomerController extends Controller
             []
         );
 
-        /*
-         * Huwag ipakita bilang active
-         * ang cancelled/completed bookings.
-         */
         $activeBooking = collect($bookings)
             ->whereNotIn('status', [
                 'Completed',
@@ -367,11 +366,6 @@ class CustomerController extends Controller
             );
 
 
-        /*
-        |--------------------------------------------------------------------------
-        | BOOKING NOT FOUND
-        |--------------------------------------------------------------------------
-        */
         if (!$booking) {
             return redirect()
                 ->route('customer.history')
@@ -382,11 +376,6 @@ class CustomerController extends Controller
         }
 
 
-        /*
-        |--------------------------------------------------------------------------
-        | CANNOT EDIT CANCELLED BOOKING
-        |--------------------------------------------------------------------------
-        */
         if (
             ($booking['status'] ?? '')
             === 'Cancelled'
@@ -400,11 +389,6 @@ class CustomerController extends Controller
         }
 
 
-        /*
-        |--------------------------------------------------------------------------
-        | CANNOT EDIT COMPLETED BOOKING
-        |--------------------------------------------------------------------------
-        */
         if (
             ($booking['status'] ?? '')
             === 'Completed'
@@ -470,11 +454,6 @@ class CustomerController extends Controller
         );
 
 
-        /*
-        |--------------------------------------------------------------------------
-        | OTHER SERVICE
-        |--------------------------------------------------------------------------
-        */
         if (
             $validated['service'] === 'Other'
             && empty($validated['other_service'])
@@ -494,11 +473,6 @@ class CustomerController extends Controller
                 : $validated['service'];
 
 
-        /*
-        |--------------------------------------------------------------------------
-        | GET BOOKINGS
-        |--------------------------------------------------------------------------
-        */
         $bookings = $request->session()->get(
             'bookings',
             []
@@ -508,11 +482,6 @@ class CustomerController extends Controller
         $updatedBooking = null;
 
 
-        /*
-        |--------------------------------------------------------------------------
-        | FIND AND UPDATE BOOKING
-        |--------------------------------------------------------------------------
-        */
         foreach (
             $bookings as $index => $booking
         ) {
@@ -524,11 +493,6 @@ class CustomerController extends Controller
             }
 
 
-            /*
-            |--------------------------------------------------------------------------
-            | BLOCK CANCELLED BOOKING
-            |--------------------------------------------------------------------------
-            */
             if (
                 ($booking['status'] ?? '')
                 === 'Cancelled'
@@ -542,11 +506,6 @@ class CustomerController extends Controller
             }
 
 
-            /*
-            |--------------------------------------------------------------------------
-            | BLOCK COMPLETED BOOKING
-            |--------------------------------------------------------------------------
-            */
             if (
                 ($booking['status'] ?? '')
                 === 'Completed'
@@ -560,11 +519,6 @@ class CustomerController extends Controller
             }
 
 
-            /*
-            |--------------------------------------------------------------------------
-            | UPDATE VALUES
-            |--------------------------------------------------------------------------
-            */
             $bookings[$index]['motorcycle'] =
                 $validated['motorcycle'];
 
@@ -598,11 +552,6 @@ class CustomerController extends Controller
         }
 
 
-        /*
-        |--------------------------------------------------------------------------
-        | NOT FOUND
-        |--------------------------------------------------------------------------
-        */
         if (!$bookingFound) {
             return redirect()
                 ->route('customer.history')
@@ -613,22 +562,12 @@ class CustomerController extends Controller
         }
 
 
-        /*
-        |--------------------------------------------------------------------------
-        | SAVE UPDATED BOOKINGS
-        |--------------------------------------------------------------------------
-        */
         $request->session()->put(
             'bookings',
             $bookings
         );
 
 
-        /*
-        |--------------------------------------------------------------------------
-        | UPDATE ACTIVE BOOKING
-        |--------------------------------------------------------------------------
-        */
         $activeBooking =
             $request->session()->get(
                 'active_booking'
@@ -644,6 +583,16 @@ class CustomerController extends Controller
                 $updatedBooking
             );
         }
+
+
+        $this->addNotification(
+            $request,
+            'Booking Updated',
+            'Booking ' .
+            $id .
+            ' has been updated successfully.',
+            'info'
+        );
 
 
         return redirect()
@@ -683,11 +632,6 @@ class CustomerController extends Controller
             }
 
 
-            /*
-            |--------------------------------------------------------------------------
-            | ALREADY CANCELLED
-            |--------------------------------------------------------------------------
-            */
             if (
                 ($booking['status'] ?? '')
                 === 'Cancelled'
@@ -701,11 +645,6 @@ class CustomerController extends Controller
             }
 
 
-            /*
-            |--------------------------------------------------------------------------
-            | COMPLETED BOOKINGS CANNOT BE CANCELLED
-            |--------------------------------------------------------------------------
-            */
             if (
                 ($booking['status'] ?? '')
                 === 'Completed'
@@ -719,11 +658,6 @@ class CustomerController extends Controller
             }
 
 
-            /*
-            |--------------------------------------------------------------------------
-            | CANCEL
-            |--------------------------------------------------------------------------
-            */
             $bookings[$index]['status'] =
                 'Cancelled';
 
@@ -739,11 +673,6 @@ class CustomerController extends Controller
         }
 
 
-        /*
-        |--------------------------------------------------------------------------
-        | BOOKING NOT FOUND
-        |--------------------------------------------------------------------------
-        */
         if (!$bookingFound) {
             return redirect()
                 ->route('customer.history')
@@ -754,22 +683,12 @@ class CustomerController extends Controller
         }
 
 
-        /*
-        |--------------------------------------------------------------------------
-        | SAVE BOOKINGS
-        |--------------------------------------------------------------------------
-        */
         $request->session()->put(
             'bookings',
             $bookings
         );
 
 
-        /*
-        |--------------------------------------------------------------------------
-        | REMOVE ACTIVE BOOKING IF CANCELLED
-        |--------------------------------------------------------------------------
-        */
         $activeBooking =
             $request->session()->get(
                 'active_booking'
@@ -786,11 +705,76 @@ class CustomerController extends Controller
         }
 
 
+        $this->addNotification(
+            $request,
+            'Booking Cancelled',
+            'Booking ' .
+            $id .
+            ' has been cancelled.',
+            'danger'
+        );
+
+
         return redirect()
             ->route('customer.history')
             ->with(
                 'success',
                 'Booking cancelled successfully.'
+            );
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | NOTIFICATIONS PAGE
+    |--------------------------------------------------------------------------
+    */
+    public function notifications(
+        Request $request
+    ) {
+        $notifications =
+            $request->session()->get(
+                'notifications',
+                []
+            );
+
+        return view(
+            'customer.notifications',
+            compact('notifications')
+        );
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | MARK ALL NOTIFICATIONS AS READ
+    |--------------------------------------------------------------------------
+    */
+    public function markNotificationsRead(
+        Request $request
+    ) {
+        $notifications =
+            $request->session()->get(
+                'notifications',
+                []
+            );
+
+        foreach (
+            $notifications as $index => $notification
+        ) {
+            $notifications[$index]['read'] = true;
+        }
+
+        $request->session()->put(
+            'notifications',
+            $notifications
+        );
+
+        return redirect()
+            ->route('customer.notifications')
+            ->with(
+                'success',
+                'All notifications marked as read.'
             );
     }
 
@@ -837,6 +821,14 @@ class CustomerController extends Controller
         $request->session()->put(
             'profile',
             $validated
+        );
+
+
+        $this->addNotification(
+            $request,
+            'Profile Updated',
+            'Your RideSync profile information has been updated.',
+            'info'
         );
 
 

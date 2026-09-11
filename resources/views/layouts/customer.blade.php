@@ -26,6 +26,17 @@
     "
 >
 
+    @php
+        $navbarNotifications = session('notifications', []);
+
+        $unreadNotificationCount = collect($navbarNotifications)
+            ->filter(function ($notification) {
+                return !($notification['read'] ?? false);
+            })
+            ->count();
+    @endphp
+
+
     <!-- ===================================================== -->
     <!-- BACKGROUND -->
     <!-- ===================================================== -->
@@ -642,10 +653,11 @@
 
                     <!-- NOTIFICATION -->
 
-                    <button
-                        type="button"
+                    <a
+                        href="{{ route('customer.notifications') }}"
                         class="
                             relative
+                            z-10
                             hidden
                             sm:flex
                             w-14
@@ -657,8 +669,13 @@
                             border-cyan-400/10
                             text-slate-300
                             hover:text-cyan-300
+                            hover:bg-cyan-400/5
                             transition
+                            cursor-pointer
+                            pointer-events-auto
                         "
+                        title="Notifications"
+                        aria-label="Notifications"
                     >
 
                         <svg
@@ -667,7 +684,7 @@
                             fill="none"
                             stroke="currentColor"
                             stroke-width="1.7"
-                            class="w-7 h-7"
+                            class="w-7 h-7 pointer-events-none"
                         >
 
                             <path
@@ -690,22 +707,38 @@
                         </svg>
 
 
-                        <span
-                            class="
-                                absolute
-                                top-[9px]
-                                right-[10px]
-                                w-2.5
-                                h-2.5
-                                rounded-full
-                                bg-green-400
-                                border-2
-                                border-[#020812]
-                                shadow-[0_0_8px_#4ade80]
-                            "
-                        ></span>
+                        @if(($unreadNotificationCount ?? 0) > 0)
 
-                    </button>
+                            <span
+                                class="
+                                    pointer-events-none
+                                    absolute
+                                    top-[5px]
+                                    right-[6px]
+                                    min-w-5
+                                    h-5
+                                    px-1
+                                    rounded-full
+                                    bg-green-400
+                                    text-[#02111c]
+                                    text-[10px]
+                                    font-black
+                                    flex
+                                    items-center
+                                    justify-center
+                                    shadow-[0_0_10px_rgba(74,222,128,.8)]
+                                "
+                            >
+                                {{
+                                    ($unreadNotificationCount ?? 0) > 9
+                                        ? '9+'
+                                        : ($unreadNotificationCount ?? 0)
+                                }}
+                            </span>
+
+                        @endif
+
+                    </a>
 
 
 
@@ -1111,6 +1144,53 @@
                     >
                         Booking History
                     </a>
+
+
+                    <a
+                        href="{{ route('customer.notifications') }}"
+                        class="
+                            px-5
+                            py-3
+                            rounded-lg
+                            text-sm
+                            transition
+
+                            {{ request()->routeIs('customer.notifications')
+                                ? 'bg-cyan-400/10 text-cyan-300 border border-cyan-400/30'
+                                : 'text-slate-300 hover:bg-cyan-400/5'
+                            }}
+                        "
+                    >
+                        Notifications
+
+                        @if(($unreadNotificationCount ?? 0) > 0)
+
+                            <span
+                                class="
+                                    ml-2
+                                    inline-flex
+                                    min-w-5
+                                    h-5
+                                    px-1
+                                    items-center
+                                    justify-center
+                                    rounded-full
+                                    bg-green-400
+                                    text-[#02111c]
+                                    text-[10px]
+                                    font-bold
+                                "
+                            >
+                                {{
+                                    ($unreadNotificationCount ?? 0) > 9
+                                        ? '9+'
+                                        : ($unreadNotificationCount ?? 0)
+                                }}
+                            </span>
+
+                        @endif
+                    </a>
+
 
                 </nav>
 

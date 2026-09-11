@@ -90,6 +90,24 @@ Route::get(
 
 /*
 |--------------------------------------------------------------------------
+| NOTIFICATIONS
+|--------------------------------------------------------------------------
+*/
+
+Route::get(
+    '/customer/notifications',
+    [CustomerController::class, 'notifications']
+)->name('customer.notifications');
+
+
+Route::post(
+    '/customer/notifications/read',
+    [CustomerController::class, 'markNotificationsRead']
+)->name('customer.notifications.read');
+
+
+/*
+|--------------------------------------------------------------------------
 | CUSTOMER PROFILE
 |--------------------------------------------------------------------------
 */
